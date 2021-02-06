@@ -1,6 +1,8 @@
 import * as tc from '@actions/tool-cache';
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
+import * as path from 'path';
+import * as fs from 'fs';
 
 const SVDCONV_VERSION: string = '3.3.35';
 
@@ -36,6 +38,9 @@ async function main(): Promise<void> {
 
   let executable = process.platform == 'win32' ? 'SVDConv.exe' : 'SVDConv';
   let output = '';
+
+  let joined = path.join(svdConvPath, executable);
+  fs.chmodSync(joined, 0o775);
 
   await exec.exec(executable, [], { listeners: { stdout: (data: Buffer) => { 
     output += data.toString();
