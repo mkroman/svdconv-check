@@ -11,38 +11,46 @@ async function init(): Promise<string> {
   let svdConvPath: string = '';
   let cachedPath: string = '';
 
-  if (process.platform == 'win32') {
-    cachedPath = tc.find('SVDConv.exe', SVDCONV_VERSION);
+  let executableName = 'SVDConv';
+  let url = '';
 
-    if (cachedPath == '') {
-      svdConvPath = await tc.downloadTool('https://github.com/ARM-software/CMSIS_5/blob/4b069d7bcb9ea77251ae2283db2ee650767f0f50/CMSIS/Utilities/Win32/SVDConv.exe');
-      cachedPath = await tc.cacheFile(svdConvPath, 'SVDConv.exe', 'SVDConv', SVDCONV_VERSION);
-    }
-  } else if (process.platform == 'linux') {
-    cachedPath = tc.find('SVDConv', SVDCONV_VERSION);
-
-    if (cachedPath == '') {
-      svdConvPath = await tc.downloadTool('https://github.com/ARM-software/CMSIS_5/raw/4b069d7bcb9ea77251ae2283db2ee650767f0f50/CMSIS/Utilities/Linux64/SVDConv');
-      cachedPath = await tc.cacheFile(svdConvPath, 'SVDConv', 'SVDConv', SVDCONV_VERSION);
-    }
-  } else {
+  if (process.platform != 'win32' && process.platform != 'linux') {
     core.setFailed(`Unsupported platform ${process.platform}`);
+
+    throw new Error(`Unsupported platform ${process.platform}`);
   }
 
-  return cachedPath;
+  if (process.platform == 'linux') {
+    url = 'https://github.com/ARM-software/CMSIS_5/raw/4b069d7bcb9ea77251ae2283db2ee650767f0f50/CMSIS/Utilities/Linux64/SVDConv';
+  } else if (process.platform == 'win32') {
+    executableName = 'SVDConv.exe';
+    url = 'https://github.com/ARM-software/CMSIS_5/blob/4b069d7bcb9ea77251ae2283db2ee650767f0f50/CMSIS/Utilities/Win32/SVDConv.exe';
+  }
+
+  cachedPath = tc.find(executableName, SVDCONV_VERSION);
+
+  if (cachedPath == '') {
+    svdConvPath = await tc.downloadTool(url);
+    cachedPath = await tc.cacheFile(svdConvPath, executableName, 'SVDConv', SVDCONV_VERSION);
+  }
+
+  return path.join(cachedPath, executableName);
 }
 
 async function main(): Promise<void> {
   const svdConvPath = await init();
-  core.addPath(svdConvPath);
+  const svdConvDir = path.dirname(svdConvPath);
+  const svdConvExe = path.basename(svdConvPath);
 
-  let executable = process.platform == 'win32' ? 'SVDConv.exe' : 'SVDConv';
+  fs.chmodSync(svdConvPath, 0o775);
+  core.addPath(svdConvDir);
+
+  // Get the input svd file
+  const svdPath = core.getInput('path', { required: true });
+
   let output = '';
 
-  let joined = path.join(svdConvPath, executable);
-  fs.chmodSync(joined, 0o775);
-
-  await exec.exec(executable, [], { listeners: { stdout: (data: Buffer) => { 
+  await exec.exec(svdConvExe, [svdPath], { listeners: { stdout: (data: Buffer) => { 
     output += data.toString();
   }}});
 
