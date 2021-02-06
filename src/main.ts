@@ -32,9 +32,12 @@ async function init(): Promise<string> {
 
 async function main(): Promise<void> {
   const svdConvPath = await init();
+  core.addPath(svdConvPath);
+
+  let executable = process.platform == 'win32' ? 'SVDConv.exe' : 'SVDConv';
   let output = '';
 
-  await exec.exec(svdConvPath, [], { listeners: { stdout: (data: Buffer) => { 
+  await exec.exec(executable, [], { listeners: { stdout: (data: Buffer) => { 
     output += data.toString();
   }}});
 
