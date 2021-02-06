@@ -1,0 +1,15 @@
+name: 'SVDConv check'
+author: 'Mikkel Kroman'
+description: 'Run SVDConv against an SVD file and annotate the diff with errors and warnings'
+
+inputs:
+  token:
+    description: GitHub token
+    required: true
+  path:
+    description: Path to the SVD file
+    required: true
+
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
