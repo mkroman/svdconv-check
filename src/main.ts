@@ -1,5 +1,6 @@
 import * as tc from '@actions/tool-cache';
 import * as core from '@actions/core';
+import * as exec from '@actions/exec';
 
 const SVDCONV_VERSION: string = '3.3.35';
 
@@ -31,8 +32,14 @@ async function init(): Promise<string> {
 
 async function main(): Promise<void> {
   const svdConvPath = await init();
+  let output = '';
+
+  await exec.exec(svdConvPath, [], { listeners: { stdout: (data: Buffer) => { 
+    output += data.toString();
+  }}});
 
   core.info(`svdConvPath: ${svdConvPath}`);
+  core.info(`output: ${output}`);
 }
 
 main();
