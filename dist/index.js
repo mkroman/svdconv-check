@@ -9489,7 +9489,7 @@ async function install() {
 function getAnnotations(svdPath, messages) {
     let annotations = [];
     while (annotations.length < 50 && messages.size > 0) {
-        let key = messages.keys().next()?.value;
+        let key = messages.keys().next().value;
         if (key !== undefined) {
             let ary = messages.get(key);
             let msg = ary?.pop();
