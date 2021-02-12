@@ -58,7 +58,7 @@ function getAnnotations(svdPath: string, messages: Map<number, Array<Message>>):
   // Horribly inefficient method of getting a bucket of 50 annotations, but
   // clippy-check does something similar, so whatever.
   while (annotations.length < 50 && messages.size > 0) {
-    let key = messages.keys().next()?.value;
+    let key = messages.keys().next().value;
 
     if (key !== undefined) {
       let ary = messages.get(key);
