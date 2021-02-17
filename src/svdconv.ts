@@ -1,6 +1,8 @@
 import * as exec from '@actions/exec';
 import * as core from '@actions/core';
 
+const MESSAGE_PATTERN: RegExp = /^\*\*\* (INFO|ERROR|WARNING) (M\d+): \S+( \(Line (\d+)\))?/;
+
 /**
  * Statistics for the number of messages printed by svdconv
  */
@@ -9,8 +11,6 @@ interface Stats {
   errors: number,
   warnings: number,
 }
-
-const MESSAGE_PATTERN: RegExp = /^\*\*\* (INFO|ERROR|WARNING) (M\d+): \S+( \(Line (\d+)\))?/;
 
 /**
  * SVDConv output message
@@ -123,15 +123,12 @@ class SVDConvParser {
 }
 
 export class SVDConv {
-  private stats: Stats;
   /**
    * A list of messages for each unique line number
    */
-  private messages: Map<number, Array<Message>>;
   private executable: string;
 
   constructor(executable: string = "SVDConv") {
-    this.messages = new Map();
     this.executable = executable;
   }
 
@@ -147,7 +144,7 @@ export class SVDConv {
     try {
       core.startGroup("Executing SVDConv");
       
-      const exitCode = await exec.exec(this.executable, [path], {
+      await exec.exec(this.executable, [path], {
         listeners: {
           stdout: (data: Buffer) => {
             stdout += data.toString();

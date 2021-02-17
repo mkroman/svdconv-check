@@ -4,6 +4,7 @@ import * as github from '@actions/github';
 import * as path from 'path';
 import * as fs from 'fs';
 import { SVDConv, Message, Result } from './svdconv';
+import { Check } from './check';
 
 const SVDCONV_VERSION: string = '3.3.35';
 
@@ -78,11 +79,13 @@ function getAnnotations(svdPath: string, messages: Map<number, Array<Message>>):
         }
 
         let message = `${msg.code}: ${msg.message}`;
+        let title = (message.length <= 252) ? message : message.substr(0, 253) + '…';
 
         annotations.push({
           path: svdPath,
           start_line,
           end_line,
+          title,
           annotation_level,
           message,
         });
@@ -104,15 +107,17 @@ async function uploadResult(result: Result, svdPath: string, options: CheckOptio
 
   core.debug("Creating check-run");
 
-  const response = await client.checks.create({
+  let check = await Check.create(client, {
     owner: options.owner,
     repo: options.repo,
     name: options.name,
     head_sha: options.head_sha,
     status: 'in_progress',
   });
- 
-  const checkRunId: number = response.data.id;
+
+  if (!check) {
+    throw new Error("Could not create check");
+  }
 
   try {
     while (result.messages.size > 0) {
@@ -122,55 +127,19 @@ async function uploadResult(result: Result, svdPath: string, options: CheckOptio
           break;
         }
 
-        // Update the check-run
-        await client.checks.update({
-            owner: options.owner,
-            repo: options.repo,
-            name: options.name,
-            check_run_id: checkRunId,
-            status: 'in_progress',
-            output: {
-                title: options.name,
-                summary: "ohai",
-                text: "hello world",
-                annotations: bucket,
-            }
+        await check.update({
+            summary: "ohai",
+            text: "hello world",
+            annotations: bucket,
         });
     }
 
-    await client.checks.update({
-        owner: options.owner,
-        repo: options.repo,
-        name: options.name,
-        check_run_id: checkRunId,
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        conclusion: 'neutral',
-        output: {
-            title: options.name,
-            summary: "ohai",
-            text: "hello world - completed",
-        }
-    });
-
+    await check.complete("ohai", "hello world - completed");
   } catch (error) {
     // Cancel the run-check
-    await client.checks.update({
-        owner: options.owner,
-        repo: options.repo,
-        name: options.name,
-        check_run_id: checkRunId,
-        status: 'completed',
-        conclusion: 'cancelled',
-        completed_at: new Date().toISOString(),
-        output: {
-            title: options.name,
-            summary: 'Unhandled error',
-            text: 'Check was cancelled due to unhandled error. Check the Action logs for details.',
-        }
-    });
+    await check.cancel('Unhandled error',
+                       'Check was cancelled due to unhandled error. Check the Action logs for details.');
   }
-
 }
 
 async function main(): Promise<void> {
@@ -201,7 +170,7 @@ ${result.stats.warnings} warnings, ${result.stats.notes} notes`);
 
     const options: CheckOptions = {
         token: githubToken,
-        name: "svdconv",
+        name: "svdconv-check",
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         head_sha: sha,
