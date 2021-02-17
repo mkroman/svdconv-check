@@ -210,6 +210,8 @@ export class Check {
    */
   public async complete(summary: string, text: string, conclusion: string = 'neutral'): Promise<void> {
     await this.client.checks.update({
+        owner: this.owner,
+        repo: this.repo,
         name: this.name,
         check_run_id: this.id,
         status: 'completed',
@@ -229,6 +231,8 @@ export class Check {
    */
   public async cancel(summary: string, text: string): Promise<void> {
     await this.client.checks.update({
+        owner: this.owner,
+        repo: this.repo,
         check_run_id: this.id,
         status: 'completed',
         conclusion: 'cancelled',
